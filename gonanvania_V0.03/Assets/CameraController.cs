@@ -10,15 +10,16 @@ public class CameraController : MonoBehaviour {
     public GameObject player;
     Vector3 playerPos;
 
-    public float speedLookaheadFactor;
+    //public float speedLookaheadFactor;
 
-    Vector3 targetPosGizmo;
+    //Vector3 targetPosGizmo;
 
-    public float smoothTime;
-    Vector3 currentVelocity = Vector3.zero;
+    //public float smoothTime;
+    //Vector3 currentVelocity = Vector3.zero;
     public float yOffset;
     public float cameraZ;
     public float lerpFactor = 3;
+    public float goDownAdd;
 
     void Start () {
         
@@ -33,8 +34,24 @@ public class CameraController : MonoBehaviour {
         var pos = transform.position;
         var targetPos = pos;
         playerPos = player.transform.position;
-        playerPos += new Vector3(0, yOffset, 0);
-        playerPos.z = cameraZ;
+        targetPos = player.transform.position;
+        targetPos.x = playerPos.x;
+        targetPos.z = cameraZ;
+        //if (player.GetComponent<Rigidbody>().velocity.y < 0) {
+        //    playerPos.y += -goDownAdd + yOffset;
+        //}
+        //else {
+        //    playerPos.y += yOffset;
+        //}
+        
+        //playerPos.z = cameraZ;
+        targetPos = Vector3.Lerp(pos, targetPos, Time.deltaTime * lerpFactor);
+        targetPos.y += yOffset;
+        targetPos.x = playerPos.x;
+        transform.position = targetPos;
+        //transform.position = new Vector3(playerPos.x, transform.position.y, cameraZ);
+
+
         //targetPos.x = playerPos.x;
         //targetPos.y = playerPos.y;
 
@@ -42,12 +59,12 @@ public class CameraController : MonoBehaviour {
         //targetPos.x = playerPos.x;
 
         //transform.position = Vector3.SmoothDamp(pos, targetPos, ref currentVelocity, smoothTime);
-        transform.position = Vector3.Lerp(pos, playerPos, Time.deltaTime * lerpFactor);
+
         //transform.position = new Vector3(playerPos.x, transform.position.y, cameraZ);
-        targetPosGizmo = targetPos;
+        //targetPosGizmo = targetPos;
     }
 
     void OnDrawGizmos() {
-        Gizmos.DrawWireSphere(targetPosGizmo, 1f);
+        //Gizmos.DrawWireSphere(targetPosGizmo, 1f);
     }
 }

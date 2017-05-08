@@ -72,6 +72,8 @@ public class Player : MonoBehaviour, IReaction {
     float[] ySpeeds = new float[5];
     int ySpeedsIndex;
 
+    bool right = true;
+
     void Start () {
 
         currentState = PlayerState.Idle;
@@ -131,20 +133,63 @@ public class Player : MonoBehaviour, IReaction {
 
     void FixedUpdate() {
 
-        //if (Input.GetKeyDown(KeyCode.C)) {
-        //    if (canMove) {
-        //        canMove = false;
-        //    } else {
-        //        canMove = true;
-        //    }
-        //}
-
         horizontalAxis = Input.GetAxis("Horizontal");
         verticalAxis = Input.GetAxis("Vertical");
 
-        if (rb.velocity.y < 0) {
-            hasJumped = false;
+        //if (horizontalAxis < 0) currentAimState = AimState.Left;
+        //if (horizontalAxis > 0) currentAimState = AimState.Right;
+
+        // aiming
+        if (verticalAxis > 0f) {
+            if (horizontalAxis > 0f) {
+                right = true;
+                currentAimState = AimState.DiagUpRight;
+            }
+            else if (horizontalAxis < 0f) {
+                right = false;
+                currentAimState = AimState.DiagUpLeft;
+            }
+            else {
+                currentAimState = AimState.Up;
+            }
+        } else if (verticalAxis < 0f) { 
+            if (horizontalAxis > 0f) {
+                right = true;
+                currentAimState = AimState.DiagDownRight;
+            }
+            else if (horizontalAxis < 0f) {
+                right = false;
+                currentAimState = AimState.DiagDownLeft;
+            } else if (horizontalAxis == 0 && currentState == PlayerState.InAir) {
+                currentAimState = AimState.Down;
+            } else {
+                if (right) {
+                    currentAimState = AimState.Right;
+                } else {
+                    currentAimState = AimState.Left;
+                }
+            }         
+        } else {
+            if (horizontalAxis < 0) {
+                currentAimState = AimState.Left;
+                right = false;
+            } else if (horizontalAxis > 0) {
+                currentAimState = AimState.Right;
+                right = true;
+            } else if (right) {
+                currentAimState = AimState.Right;
+            } else {
+                currentAimState = AimState.Left;
+            }             
         }
+        
+        
+
+        
+
+        //if (rb.velocity.y < 0) {
+        //    hasJumped = false;
+        //}
 
         velocity = rb.velocity; // make a reference to our rigidbody
 
@@ -226,24 +271,15 @@ public class Player : MonoBehaviour, IReaction {
 
 
         // jump + dropdown
-        if (Input.GetButtonDown("Jump")) {
-            if (currentState != PlayerState.InAir) {  // the obvious checks
-                CrouchEnd();
-
-                hasJumped = true;
-                rb.velocity = new Vector3(rb.velocity.x, vSpeed, 0);
-                print("jump called");
-            }
+        if (hasJumped) {
+            rb.velocity = new Vector3(rb.velocity.x, vSpeed, 0);
+            UpdateSmoothedSpeed(rb.velocity.y);
+            hasJumped = false;
         }
-        UpdateSmoothedSpeed(rb.velocity.y);
-    }       
-
-    void Update() {
-
+    }      
         
 
-        if (horizontalAxis < 0) currentAimState = AimState.Left;
-        if (horizontalAxis > 0) currentAimState = AimState.Right;
+    void Update() {
 
         if (Input.GetKeyDown(KeyCode.C)) {
             if (canMove) {
@@ -254,29 +290,11 @@ public class Player : MonoBehaviour, IReaction {
             }
         }
 
-        // aiming
-        if (verticalAxis > 0f) {
-            if (horizontalAxis > 0f) {
-                currentAimState = AimState.DiagUpRight;
-            }
-            else if (horizontalAxis < 0f) {
-                currentAimState = AimState.DiagUpLeft;
-            }
-            else {
-                currentAimState = AimState.Up;
-            }
-        }
-        if (verticalAxis < 0f) {
-            if (horizontalAxis > 0f) {
-                currentAimState = AimState.DiagDownRight;
-            }
-
-            else if (horizontalAxis < 0f) {
-                currentAimState = AimState.DiagDownLeft;
-            }
-
-            else if (horizontalAxis == 0 && currentState == PlayerState.InAir) {
-                currentAimState = AimState.Down;
+        if (Input.GetButtonDown("Jump")) {
+            if (currentState != PlayerState.InAir) {
+                CrouchEnd();
+                hasJumped = true;
+                //print("jump called");
             }
         }
 
