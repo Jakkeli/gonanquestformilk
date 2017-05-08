@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Linq;
 
 public enum PlayerState { Idle, Moving, InAir };
 public enum AimState { Right, Left, Up, Down, DiagUpRight, DiagUpLeft, DiagDownRight, DiagDownLeft };
@@ -66,6 +67,11 @@ public class Player : MonoBehaviour, IReaction {
     float horizontalAxis;
     float verticalAxis;
 
+    public float smoothedVerticalSpeed;
+
+    float[] ySpeeds = new float[5];
+    int ySpeedsIndex;
+
     void Start () {
 
         currentState = PlayerState.Idle;
@@ -115,7 +121,15 @@ public class Player : MonoBehaviour, IReaction {
         canWhip = true;
     }
 
-    void FixedUpdate () {
+    void UpdateSmoothedSpeed(float newXspeed) {
+        ySpeeds[ySpeedsIndex++] = newXspeed;
+        ySpeedsIndex %= ySpeeds.Length;
+        var avg = ySpeeds.Sum();
+        avg /= ySpeeds.Length;
+        smoothedVerticalSpeed = avg;
+    }
+
+    void FixedUpdate() {
 
         //if (Input.GetKeyDown(KeyCode.C)) {
         //    if (canMove) {
@@ -141,7 +155,8 @@ public class Player : MonoBehaviour, IReaction {
                 CrouchEnd();
             }
             currentState = PlayerState.InAir;           //set inAir
-        } else if (currentState == PlayerState.InAir) { //on the ground set idle
+        }
+        else if (currentState == PlayerState.InAir) { //on the ground set idle
             currentState = PlayerState.Idle;
         }
 
@@ -153,16 +168,17 @@ public class Player : MonoBehaviour, IReaction {
                 if (!crouchWhip) {                          // change the whip to crouch-state
                     whip.transform.position += new Vector3(0, -0.5f, 0);
                     crouchWhip = true;
-                }             
-            
+                }
+
                 crouchCollider.SetActive(true); // make the collider smaller
                 fullCollider.enabled = false;
                 upperBody.GetComponent<MeshRenderer>().enabled = false; // make it look like we are crouching
                 // animation crouch
-            } else if (verticalAxis >= 0f && isCrouching) {
+            }
+            else if (verticalAxis >= 0f && isCrouching) {
                 CrouchEnd();
             }
-        }                
+        }
 
         if (currentState != PlayerState.InAir) {
             if (horizontalAxis != 0f) {                     // check if we are moving
@@ -181,24 +197,28 @@ public class Player : MonoBehaviour, IReaction {
 
         if (whipping && currentState != PlayerState.InAir) {
             canMove = false;
-        } else {
+        }
+        else {
             canMove = true;
         }
 
         if (!canMove) {
             rb.velocity = new Vector3(0, rb.velocity.y, 0);
-        } else if (horizontalAxis != 0) {
+        }
+        else if (horizontalAxis != 0) {
             if (isCrouching) {
                 rb.velocity = new Vector3(horizontalAxis * (hSpeed / 2), rb.velocity.y, 0);
-            } else {
+            }
+            else {
                 rb.velocity = new Vector3(horizontalAxis * hSpeed, rb.velocity.y, 0);
             }
-            
-        } else {
+
+        }
+        else {
             rb.velocity = new Vector3(0, rb.velocity.y, 0);
         }
 
-        
+
 
         if (currentState == PlayerState.InAir && rb.velocity.y < 0) {
             velocity.y -= extraGravity;
@@ -215,101 +235,8 @@ public class Player : MonoBehaviour, IReaction {
                 print("jump called");
             }
         }
-
-
-        //// aiming
-        //if (verticalAxis > 0f) {
-        //    if (horizontalAxis > 0f) {
-        //        currentAimState = AimState.DiagUpRight;
-        //    }
-        //    else if (horizontalAxis < 0f) {
-        //        currentAimState = AimState.DiagUpLeft;
-        //    }
-        //    else {
-        //        currentAimState = AimState.Up;
-        //    }
-        //}
-        //if (verticalAxis < 0f) {
-        //    if (horizontalAxis > 0f) {
-        //        currentAimState = AimState.DiagDownRight;
-        //    }
-
-        //    else if (horizontalAxis < 0f) {
-        //        currentAimState = AimState.DiagDownLeft;
-        //    }
-
-        //    else if (horizontalAxis == 0 && currentState == PlayerState.InAir) {
-        //        currentAimState = AimState.Down;
-        //    }
-        //}
-
-        //// shooting
-        //if (Input.GetButtonDown("Fire1") && canWhip) {
-        //    // shooting forward
-        //    if (!isCrouching && currentAimState == AimState.Right) {
-        //        // whip right
-        //        //whipRight.SetActive(true);
-        //        whipRight.GetComponent<Whip>().DoIt();
-        //    } else if (!isCrouching && currentAimState == AimState.Left) {
-        //        // whip left
-        //        whipLeft.SetActive(true);
-        //        whipLeft.GetComponent<Whip>().DoIt();
-        //    }
-
-        //    // shooting forward while crouched
-        //    if ((isCrouching)) {
-        //        if (currentAimState == AimState.Right) {
-        //            // whip right crouched
-        //            whipRight.SetActive(true);
-        //            whipRight.GetComponent<Whip>().DoIt();
-        //        }
-
-        //        else if (currentAimState == AimState.Left) {
-        //            // whip left crouched
-        //            whipLeft.SetActive(true);
-        //            whipLeft.GetComponent<Whip>().DoIt();
-        //        }
-        //    }
-
-        //    // shooting upwards
-        //    if (currentAimState == AimState.DiagUpRight) {
-        //        //diagupright
-        //        whipDiagUpRight.SetActive(true);
-        //        whipDiagUpRight.GetComponent<Whip>().DoIt();
-        //    }
-        //    if (currentAimState == AimState.DiagUpLeft) {
-        //        //diagupleft
-        //        whipDiagUpLeft.SetActive(true);
-        //        whipDiagUpLeft.GetComponent<Whip>().DoIt();
-        //    }
-        //    if (currentAimState == AimState.Up) {
-        //        //up
-        //        whipUp.SetActive(true);
-        //        whipUp.GetComponent<Whip>().DoIt();
-        //    }
-
-        //    // shooting downwards
-        //    if (currentAimState == AimState.DiagDownRight) {
-        //        //diagdownright
-        //        whipDiagDownRight.SetActive(true);
-        //        whipDiagDownRight.GetComponent<Whip>().DoIt();
-        //    }
-        //    if (currentAimState == AimState.DiagDownLeft) {
-        //        //diagdownleft
-        //        whipDiagDownLeft.SetActive(true);
-        //        whipDiagDownLeft.GetComponent<Whip>().DoIt();
-        //    }
-        //    if (currentState == PlayerState.InAir && currentAimState == AimState.Down) {
-        //        //down
-        //        whipDown.SetActive(true);
-        //        whipDown.GetComponent<Whip>().DoIt();
-        //    }
-        //    canWhip = false;
-        //    //Invoke("Whip", 0.5f);
-        //}
-
-        //rb.velocity = velocity;     // put our referenced velocity back into the rigidbody
-    }
+        UpdateSmoothedSpeed(rb.velocity.y);
+    }       
 
     void Update() {
 
@@ -419,13 +346,4 @@ public class Player : MonoBehaviour, IReaction {
             //Invoke("Whip", 0.5f);
         }
     }
-
-    //private void FixedUpdate() {
-    //    velocity = rb.velocity;
-    //    rb.velocity = velocity;     // put our referenced velocity back into the rigidbody
-    //}
-
-
-}   // to do: set the right animations
-    // secondary weapon
-    // indiana jones
+}

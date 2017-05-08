@@ -28,3 +28,5 @@ sysinfo.txt
 # Builds
 *.apk
 *.unitypackage
+gonanvania_V0.03/Temp/
+gonanvania_V0.03/Library/
