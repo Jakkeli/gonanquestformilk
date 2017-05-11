@@ -21,6 +21,9 @@ public class Enemy : MonoBehaviour, IReaction {
     public bool activateOnStart;
     bool canAttack = true;
 
+    void Awake() {
+        player = GameObject.Find("player");
+    }
 
     void Start () {
         patrolDir = 1;
@@ -46,7 +49,7 @@ public class Enemy : MonoBehaviour, IReaction {
         if (!activated) {
             activated = true;
             print("enemy activated");
-            player = GameObject.Find("player");
+            //player = GameObject.Find("player");
             currentState = EnemyState.Chase;
         }
     }
@@ -137,8 +140,16 @@ public class Enemy : MonoBehaviour, IReaction {
 
 
     void OnCollisionEnter(Collision c) {
+        
         if (c.gameObject.tag == "Player" && canAttack) {
-            player.GetComponent<Player>().TakeDamage();
+            int dir;
+            if (c.transform.position.x < transform.position.x) {
+                dir = -1;
+            } else {
+                dir = 1;
+            }
+            
+            player.GetComponent<Player>().TakeDamage(dir);
             canAttack = false;
             Invoke("CanAttack", 2.1f);
         }

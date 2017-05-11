@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public enum CameraState { Normal, CutScene, Pause, Gameover };
-public enum CameraMode { Lerp, AverageSmooth, AllLocked };
+public enum CameraMode { Lerp, AverageSmooth, AllLocked, XOnlyLocked };
 
 public class CameraController : MonoBehaviour {
 
@@ -20,6 +20,9 @@ public class CameraController : MonoBehaviour {
     public float cameraZ;
     public float lerpFactor = 3;
     public float goDownAdd;
+    public float lockedY;
+
+    public bool gizmosOn;
 
     void FixedUpdate() {
         var pos = transform.position;
@@ -35,17 +38,22 @@ public class CameraController : MonoBehaviour {
             targetPos.x = playerPos.x;
             transform.position = targetPos;
         } else if (currentMode == CameraMode.AverageSmooth) {
-            targetPos.y += speedLookaheadFactor * player.GetComponent<Player>().smoothedVerticalSpeed + avgSmoothOffset;
+            //targetPos.y += speedLookaheadFactor * player.GetComponent<Player>().smoothedVerticalSpeed + avgSmoothOffset;
             targetPos.x = playerPos.x;
             targetPos.z = cameraZ;
             transform.position = Vector3.SmoothDamp(pos, targetPos, ref currentVelocity, smoothTime);
         } else if (currentMode == CameraMode.AllLocked) {
             targetPos.y = playerPos.y + avgSmoothOffset;
             transform.position = targetPos;
+        } else if (currentMode == CameraMode.XOnlyLocked) {
+            targetPos.x = playerPos.x;
+            targetPos.y = lockedY;
+            transform.position = targetPos;
         }
     }
 
     void OnDrawGizmos() {
-        Gizmos.DrawWireSphere(targetPos, 1f);
+        if (gizmosOn) Gizmos.DrawWireSphere(targetPos, 1f);
+
     }
 }

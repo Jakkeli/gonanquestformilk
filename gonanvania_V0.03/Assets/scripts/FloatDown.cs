@@ -48,7 +48,7 @@ public class FloatDown : MonoBehaviour {
     }
 
     void OnTriggerEnter(Collider c) {
-        if (c.tag == "Player") {
+        if (c.tag == "Player" && start) {
             // do things in gamemanager
             AudioSource.PlayClipAtPoint(pickupSound, transform.position, 0.5f);
             GetComponent<SpriteRenderer>().enabled = false;

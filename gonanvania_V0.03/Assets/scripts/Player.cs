@@ -1,367 +1,166 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
-using System.Linq;
 
-public enum PlayerState { Idle, Moving, InAir };
-public enum AimState { Right, Left, Up, Down, DiagUpRight, DiagUpLeft, DiagDownRight, DiagDownLeft };
+public enum PlayerState { Idle, Moving, InAir, Crouch };
+public enum AimState { Forward, Up, Down, DiagUp, DiagDown };
 
-public class Player : MonoBehaviour, IReaction {
+public class Player : MonoBehaviour {
 
     public PlayerState currentState;
     public AimState currentAimState;
 
-    public GameObject whip;
-
-    public GameObject whipRight;
-    public GameObject whipLeft;
-    public GameObject whipUp;
-    public GameObject whipDown;
-    public GameObject whipDiagUpRight;
-    public GameObject whipDiagUpLeft;
-    public GameObject whipDiagDownRight;
-    public GameObject whipDiagDownLeft;
-    public GameObject shuriken;
-    public GameObject upperBody;
-
-    Rigidbody rb;
-
-    public GameObject crouchCollider;
-    CapsuleCollider fullCollider;
-
-    public float hSpeed = 10;
-    public float vSpeed = 600;
-
-    public float groundCheckDist = 0.5f;
-
-    public LayerMask groundOnly;
-
-    public int hp;
-
-    public bool canWhip = true;
-    bool crouchWhip;
-    bool isCrouching;
-
-    float tickTime;
-
-
-    public bool canMove = true;
-
-
-
-    public float extraGravity;
-
-    float addedGravity;
-
-    bool hasJumped;
-
-    public bool canBeHit = true;
-
-    public bool whipping;
-
-    public Slider healthSlider; //need to actually make one of these
-
-    Vector3 velocity;
+    Rigidbody2D rb;
+    BoxCollider2D boxCol;
+    public float hSpeed = 4;
+    public float vSpeed = 8;
 
     float horizontalAxis;
     float verticalAxis;
 
-    public float smoothedVerticalSpeed;
+    public float groundCheckWidth = 0.5f;
+    public float groundCheckHeight = 0.5f;
+    public float stairCheckDist = 1.1f;
 
-    float[] ySpeeds = new float[5];
-    int ySpeedsIndex;
+    public Transform groundCheck;
+    public LayerMask whatIsGround;
+    public LayerMask stairsOnly;
 
-    bool right = true;
+    public int hp;
 
-    void Start () {
+    bool facingRight;
+    bool canMove;
+    bool jump;
+    bool canJump;
+    public bool onStair;
+    public bool whipping;
+    public bool canWhip;
 
-        currentState = PlayerState.Idle;
-        currentAimState = AimState.Right;
-        rb = GetComponent<Rigidbody>();
-        //whipScript = whip.GetComponent<Whip>();
-        fullCollider = GetComponent<CapsuleCollider>();
-    }
-	
-    public void Activate() {
+    Vector2 v;
 
-    }
-
-	public void TakeDamage() {
-        if (canBeHit) {
-            hp--;
-            print("player took a hit");
-            Invoke("CanTakeAHit", 2);
-        }
-    }
-        
-
-    void CanTakeAHit() {
-        canBeHit = true;
+    void Start() {
+        facingRight = true;
+        canMove = true;
+        canJump = true;
+        rb = GetComponent<Rigidbody2D>();
+        boxCol = GameObject.Find("boxCol").GetComponent<BoxCollider2D>();
     }
 
-    public void React() {
-        //print("player reacted");
+    public void TakeDamage(int dir) {
+
     }
 
     public void CrouchEnd() {
-        if (crouchWhip) {
-            whip.transform.position += new Vector3(0, 0.5f, 0);
-            crouchWhip = false;
-        }
+        //if (crouchWhip) {
+        //    whip.transform.position += new Vector3(0, 0.5f, 0);
+        //    crouchWhip = false;
+        //}
         //print("crouchend called");
-
-        fullCollider.enabled = true;
-        crouchCollider.SetActive(false);
-        upperBody.GetComponent<MeshRenderer>().enabled = true;
         currentState = PlayerState.Idle;
-        isCrouching = false;
-        //animation back to normal sized
-    }
-
-    void Whip() {
-        canWhip = true;
-    }
-
-    void UpdateSmoothedSpeed(float newXspeed) {
-        ySpeeds[ySpeedsIndex++] = newXspeed;
-        ySpeedsIndex %= ySpeeds.Length;
-        var avg = ySpeeds.Sum();
-        avg /= ySpeeds.Length;
-        smoothedVerticalSpeed = avg;
+        //animation
+        boxCol.size = new Vector2(1, 2);
+        boxCol.offset = new Vector2(0, 0);
     }
 
     void FixedUpdate() {
+        // ground-check
+        float colliderLowerEdge = transform.position.y + boxCol.offset.y - boxCol.size.y / 2;
+        var checkBoxCenter = new Vector2(transform.position.x, colliderLowerEdge + 0.05f);
+        Debug.DrawLine(
+            new Vector2(transform.position.x - groundCheckWidth / 2, colliderLowerEdge),
+            new Vector3(transform.position.x + groundCheckWidth / 2, colliderLowerEdge - groundCheckHeight));
 
-        horizontalAxis = Input.GetAxis("Horizontal");
-        verticalAxis = Input.GetAxis("Vertical");
-
-        //if (horizontalAxis < 0) currentAimState = AimState.Left;
-        //if (horizontalAxis > 0) currentAimState = AimState.Right;
-
-        // aiming
-        if (verticalAxis > 0f) {
-            if (horizontalAxis > 0f) {
-                right = true;
-                currentAimState = AimState.DiagUpRight;
-            }
-            else if (horizontalAxis < 0f) {
-                right = false;
-                currentAimState = AimState.DiagUpLeft;
-            }
-            else {
-                currentAimState = AimState.Up;
-            }
-        } else if (verticalAxis < 0f) { 
-            if (horizontalAxis > 0f) {
-                right = true;
-                currentAimState = AimState.DiagDownRight;
-            }
-            else if (horizontalAxis < 0f) {
-                right = false;
-                currentAimState = AimState.DiagDownLeft;
-            } else if (horizontalAxis == 0 && currentState == PlayerState.InAir) {
-                currentAimState = AimState.Down;
-            } else {
-                if (right) {
-                    currentAimState = AimState.Right;
-                } else {
-                    currentAimState = AimState.Left;
-                }
-            }         
-        } else {
-            if (horizontalAxis < 0) {
-                currentAimState = AimState.Left;
-                right = false;
-            } else if (horizontalAxis > 0) {
-                currentAimState = AimState.Right;
-                right = true;
-            } else if (right) {
-                currentAimState = AimState.Right;
-            } else {
-                currentAimState = AimState.Left;
-            }             
-        }
-        
-        
-
-        
-
-        //if (rb.velocity.y < 0) {
-        //    hasJumped = false;
-        //}
-
-        velocity = rb.velocity; // make a reference to our rigidbody
-
-
-        // check if player is in the air
-        if (!Physics.Raycast(transform.position, Vector3.down, groundCheckDist, groundOnly)) {
-            if (isCrouching) {   //stop crouching if we jump
+        if (!Physics2D.OverlapBox(groundCheck.position, new Vector2(groundCheckWidth, groundCheckHeight), 0, whatIsGround)) {
+            if (currentState == PlayerState.Crouch) {
                 CrouchEnd();
             }
-            currentState = PlayerState.InAir;           //set inAir
+            currentState = PlayerState.InAir;
         }
-        else if (currentState == PlayerState.InAir) { //on the ground set idle
+        else if (currentState == PlayerState.InAir) {
             currentState = PlayerState.Idle;
+            canJump = true;
+        }
+        else {
+            canJump = false;
+        }
+        // stair check
+        if (Physics.Raycast(transform.position, Vector3.down, stairCheckDist, stairsOnly)) {
+            onStair = true;
+            currentState = PlayerState.Idle;
+        } else {
+            onStair = false;
         }
 
-        //crouch
+        v = rb.velocity;    //rigidbody velocity
 
-        if (currentState != PlayerState.InAir) {            // so we can't crouch in the air
-            if (verticalAxis < 0f && !isCrouching) { // check for the button
-                isCrouching = true;          // set the PlayerState
-                if (!crouchWhip) {                          // change the whip to crouch-state
-                    whip.transform.position += new Vector3(0, -0.5f, 0);
-                    crouchWhip = true;
-                }
+        if (v.x > 0) facingRight = true;
+        if (v.x < 0) facingRight = false;
 
-                crouchCollider.SetActive(true); // make the collider smaller
-                fullCollider.enabled = false;
-                upperBody.GetComponent<MeshRenderer>().enabled = false; // make it look like we are crouching
-                // animation crouch
-            }
-            else if (verticalAxis >= 0f && isCrouching) {
-                CrouchEnd();
-            }
+        if (facingRight) {
+            GetComponent<SpriteRenderer>().flipX = true;
+        } else {
+            GetComponent<SpriteRenderer>().flipX = false;
         }
 
         if (currentState != PlayerState.InAir) {
-            if (horizontalAxis != 0f) {                     // check if we are moving
+            if (horizontalAxis != 0f && currentState != PlayerState.Crouch) {
                 currentState = PlayerState.Moving;
             }
-
-            else if (!isCrouching) {
-                currentState = PlayerState.Idle;            // idle if we are not in the air, moving or crouching
+            else {
+                currentState = PlayerState.Idle;
             }
         }
 
-        //if (horizontalAxis < 0) currentAimState = AimState.Left;
-        //if (horizontalAxis > 0) currentAimState = AimState.Right;
+        // movement
 
-        // moving
-
-        if (whipping && currentState != PlayerState.InAir) {
-            canMove = false;
-        }
-        else {
-            canMove = true;
-        }
-
-        if (!canMove) {
-            rb.velocity = new Vector3(0, rb.velocity.y, 0);
-        }
-        else if (horizontalAxis != 0) {
-            if (isCrouching) {
+        if (canMove) {
+            if (currentState == PlayerState.Crouch) {
                 rb.velocity = new Vector3(horizontalAxis * (hSpeed / 2), rb.velocity.y, 0);
             }
             else {
                 rb.velocity = new Vector3(horizontalAxis * hSpeed, rb.velocity.y, 0);
             }
-
         }
         else {
             rb.velocity = new Vector3(0, rb.velocity.y, 0);
         }
 
+        // jump & dropdown
 
-
-        if (currentState == PlayerState.InAir && rb.velocity.y < 0) {
-            velocity.y -= extraGravity;
-        }
-
-
-        // jump + dropdown
-        if (hasJumped) {
+        if (jump && currentState != PlayerState.Crouch) {
             rb.velocity = new Vector3(rb.velocity.x, vSpeed, 0);
-            UpdateSmoothedSpeed(rb.velocity.y);
-            hasJumped = false;
+            canJump = false;
+            jump = false;
         }
-    }      
-        
+        else if (jump && currentState == PlayerState.Crouch && onStair) {
+
+        }
+    }
 
     void Update() {
 
-        if (Input.GetKeyDown(KeyCode.C)) {
-            if (canMove) {
-                canMove = false;
-            }
-            else {
-                canMove = true;
-            }
-        }
+        horizontalAxis = Input.GetAxis("Horizontal");
+        verticalAxis = Input.GetAxis("Vertical");
 
         if (Input.GetButtonDown("Jump")) {
             if (currentState != PlayerState.InAir) {
                 CrouchEnd();
-                hasJumped = true;
+                jump = true;
                 //print("jump called");
             }
         }
 
-        // shooting
-        if (Input.GetButtonDown("Fire1") && canWhip) {
-            // shooting forward
-            if (!isCrouching && currentAimState == AimState.Right) {
-                // whip right
-                //whipRight.SetActive(true);
-                whipRight.GetComponent<Whip>().DoIt();
+        // crouch
+        if (currentState != PlayerState.InAir) {
+            if (verticalAxis < 0) {
+                currentState = PlayerState.Crouch;
+                boxCol.size = new Vector2(boxCol.size.x, 1f);
+                boxCol.offset = new Vector2(0, -0.5f);
+                //animation
             }
-            else if (!isCrouching && currentAimState == AimState.Left) {
-                // whip left
-                whipLeft.SetActive(true);
-                whipLeft.GetComponent<Whip>().DoIt();
+            else if (verticalAxis >= 0) {
+                CrouchEnd();
             }
-
-            // shooting forward while crouched
-            if ((isCrouching)) {
-                if (currentAimState == AimState.Right) {
-                    // whip right crouched
-                    whipRight.SetActive(true);
-                    whipRight.GetComponent<Whip>().DoIt();
-                }
-
-                else if (currentAimState == AimState.Left) {
-                    // whip left crouched
-                    whipLeft.SetActive(true);
-                    whipLeft.GetComponent<Whip>().DoIt();
-                }
-            }
-
-            // shooting upwards
-            if (currentAimState == AimState.DiagUpRight) {
-                //diagupright
-                whipDiagUpRight.SetActive(true);
-                whipDiagUpRight.GetComponent<Whip>().DoIt();
-            }
-            if (currentAimState == AimState.DiagUpLeft) {
-                //diagupleft
-                whipDiagUpLeft.SetActive(true);
-                whipDiagUpLeft.GetComponent<Whip>().DoIt();
-            }
-            if (currentAimState == AimState.Up) {
-                //up
-                whipUp.SetActive(true);
-                whipUp.GetComponent<Whip>().DoIt();
-            }
-
-            // shooting downwards
-            if (currentAimState == AimState.DiagDownRight) {
-                //diagdownright
-                whipDiagDownRight.SetActive(true);
-                whipDiagDownRight.GetComponent<Whip>().DoIt();
-            }
-            if (currentAimState == AimState.DiagDownLeft) {
-                //diagdownleft
-                whipDiagDownLeft.SetActive(true);
-                whipDiagDownLeft.GetComponent<Whip>().DoIt();
-            }
-            if (currentState == PlayerState.InAir && currentAimState == AimState.Down) {
-                //down
-                whipDown.SetActive(true);
-                whipDown.GetComponent<Whip>().DoIt();
-            }
-            canWhip = false;
-            //Invoke("Whip", 0.5f);
         }
     }
 }
