@@ -38,12 +38,14 @@ public class Player : MonoBehaviour {
 
     Vector2 v;
 
+    public Animator animator;
+
     void Start() {
         facingRight = true;
         canMove = true;
         canJump = true;
         rb = GetComponent<Rigidbody2D>();
-        boxCol = GameObject.Find("boxCol").GetComponent<BoxCollider2D>();
+        boxCol = GetComponent<BoxCollider2D>();
     }
 
     public void TakeDamage(int dir) {
@@ -161,6 +163,12 @@ public class Player : MonoBehaviour {
             else if (verticalAxis >= 0) {
                 CrouchEnd();
             }
+        }
+        if(v.x != 0) {
+            animator.SetBool("walk", true);
+        }
+        if(v.x == 0) {
+            animator.SetBool("walk", false);
         }
     }
 }
